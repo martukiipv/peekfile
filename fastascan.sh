@@ -4,21 +4,21 @@ if [[ -z $1 ]]; then fold=.; else fold=$1; fi
 #Establecemos por defecto que el número de líneas sea 0.
 if [[ -z $2 ]]; then N=0; else N=$2; fi
 
-
-echo There are $(find $fold -type f -name '*.fa' -or -name '*.fasta'| wc -l) fasta files in this folder. 
-
 find $fold -type f -name '*.fa' -or -name '*.fasta' | while read i;
 do
 	if [[ -s $i ]]; then
-		awk '/>/{print $1}' $i;
-		echo; fi; done
+		awk '/>/{print $1}' $i >> uniq_files
+		fi; done
 
+echo In this folder there are:
+echo - $(find $fold -type f -name '*.fa' -or -name '*.fasta'| wc -l) fasta files.
+echo - $(cat uniq_files | sort | uniq | wc -l) uniques IDs.
+rm uniq_files
 
 #find $fold -type f -name '*.fa' -or -name '*.fasta' | while read i;
 #do 
 	#echo $i $'\t' $(if [[ -h $i ]]; then echo Symbolic link; else echo Real file; fi) $'\t' Number of sequences: $(awk '/>/{print "line"}' $i | wc -l); 
 #echo ; done
-
 
 
 
