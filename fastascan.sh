@@ -13,22 +13,26 @@ do
 echo In this folder there are:
 echo - $(find $fold -type f -name '*.fa' -or -name '*.fasta'| wc -l) fasta files.
 echo - $(cat uniq_files | sort | uniq | wc -l) uniques IDs.
+echo ============================
 rm uniq_files
 
-#find $fold -type f -name '*.fa' -or -name '*.fasta' | while read i;
-#do 
-	#echo $i $'\t' $(if [[ -h $i ]]; then echo Symbolic link; else echo Real file; fi) $'\t' Number of sequences: $(awk '/>/{print "line"}' $i | wc -l); 
-#echo ; done
+rm a
+find $fold -type f -name '*.fa' -or -name '*.fasta' | while read i;
+do 
+	seqs=$(awk '{ORS=""} !/>/{print $0}' $i | sed 's/[- ]//g');
+	echo $(basename $i) $(if [[ -h $i ]]; then echo Symbolic link; else echo Real file; fi) Number of sequences: $(awk '/>/{print "line"}' $i | wc -l) $(echo -n $seqs | wc -m) $(echo $seqs | if [[ -n $(grep -i [DEQHILKMFPSWV]) ]]; then 
+		echo Aminoacid sequence; 
+	else 
+		echo Genetic sequence; fi);
+	echo; 
+done
 
 
 
-#Para contar la longitud de las secuencias 
-#sed 's/[- \n]//g' $i | awk '/>/{print "-"} !/>/{print length($0)}' | while read j; do 
-	#if [[ $j == - ]]; 
-		#then N=0; else N=$((N+$j)); S=$N; fi; 
-	#if [[ $S -gt $N ]]; 
-		#then echo $S; fi; done
 
 
-#Por si se trata de la sequencia total
-#sed 's/[- \n]//g' example.fa | for i in $(awk '!/>/{print length($0)}'); do LEN=$((LEN + $i)); done; echo $LEN
+
+
+
+
+
