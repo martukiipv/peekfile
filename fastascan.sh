@@ -1,73 +1,74 @@
 #Establecemos por defecto que la carpeta sea la actual.
-if [[ -z $1 ]]; then fold=. N=0;
-elif [[ -n $1 && -n $2 ]]; then fold=$1 N=$2;
-elif [[ -n $1 && -z $2 ]]; then
-	if [[ $1 != [0123456789] ]]; then fold=$1 N=0;
-	else
-		if ls $1 . > out254762; then fold=$1 N=0; #HAgo esta comprobación por si la carpeta es un número.
-		else fold=. N=$1;
-		fi;
-	fi;
+if [[ -z $1 ]]; then fold=.; N=0
+else
+	if [[ -d $1 ]]; then
+		if [[ -x $1 && -r $1 ]]; then fold=$1
+		else echo $1: Permission denied | grep --color "$1: Permission denied"; fold='Warning'
+		fi
+		if [[ -n $2 ]]; then
+			if echo $2 | grep -q '[0-9]'; then N=$2
+			else echo Warning: give a valid number | grep --color "Warning: give a valid number"; N=0
+			fi
+		else 
+			N=0
+		fi
+	elif echo $1 | grep -q '[0-9]'; then fold=. N=$1
+	else echo $1: Dir not found | grep --color "$1: Dir not found"; fold='Warning'
+	fi
 fi
 
-ls $fold . > out254762 || fold=. #por si la carpeta no existe
-rm out254762
+if [[ $fold != 'Warning' ]]; then
+	
+	findfasta=$(find $fold -type f -name '*.fa' -or -name '*.fasta')
 
-echo carpeta: $fold
-echo numero:  $N
-echo
-echo
-echo ===================
+	for i in $findfasta;
+	do
+		if [[ -r $i ]]; then
+			#Creamos el archivo all_id, donde guardamos todas las secuencias.
+			awk '/>/{print $1}' $i >> all_id254762
 
-findfasta=$(find $fold -type f -name '*.fa' -or -name '*.fasta')
-
-for i in $findfasta;
-do
-	#Creamos el archivo all_id, donde guardamos todas las secuencias.
-	if [[ -s $i ]]; then
-		awk '/>/{print $1}' $i >> all_id
-		fi; 
-
-	#Y ahora vamos a crear un archivo con los headers para poderlo poner con columnas bonitas
-	seqs=$(awk '{ORS=""} !/>/{print $0}' $i | sed 's/[- ]//g');
-	(echo $(basename $i)^I$(if [[ -h $i ]]; then 
-		echo Symbolic link; 
-	else 
-		echo Real file; fi)^INumber of sequences: $(awk '/>/{print "line"}' $i | wc -l)^ITotal length: $(echo -n $seqs | wc -m)^I$(echo $seqs | if [[ -n $(grep -i [DEQHILKMFPSWV]) ]]; then 
-		echo Aminoacid sequence; 
-	else 
-		echo Genetic sequence; fi)) >> a
-done
+			#Y ahora vamos a crear un archivo con los headers para poderlo poner con columnas bonitas
+			seqs=$(awk '{ORS=""} !/>/{print $0}' $i | sed 's/[- ]//g');
+			(echo "==>" $(basename $i)$'\t'\
+				$(if [[ -h $i ]]; then echo Symbolic link; else echo Real file; fi)$'\t'\
+				Number of sequences: $(awk '/>/{print "line"}' $i | wc -l)$'\t'\
+				Total length: $(echo -n $seqs | wc -m)$'\t'\
+				$(if echo $seqs | grep -q -i [DEQHILKMFPSWV]; then echo Aminoacid sequence; else if [[ $(echo -n $seqs | wc -m) -ge 5 ]]; then echo Genetic sequence; else echo Indetermined; fi; fi)$'\t'"<==") >> header254762
+		else
+			echo $i: Permission denied
+		fi
+	done
 
 
-echo In this folder there are:
-echo - $(echo $findfasta| wc -w) fasta files.
-echo - $(cat all_id | sort | uniq | wc -l) uniques IDs.
-echo 
-rm all_id
+	echo In this folder there are:
+	echo - $(echo $findfasta| wc -w) fasta files.
+	echo - $(if [[ -e all_id254762 ]]; then cat all_id254762 | sort | uniq | wc -l; else echo 0; fi) uniques IDs.
+	echo
+	if [[ -e all_id254762 ]]; then rm all_id254762; fi
 
+	cont=0
+	for i in $findfasta;
+	do
+		if [[ -r $i ]]; then
+			cont=$((cont+1))
+			column -t -s $'\t' header254762 | awk -v line=$cont -F’\t’ 'NR==line {print $0}'
 
-for i in $findfasta;
-do
-	column -t -s'^I' a | awk -F’\t’ '$1~/example1.fasta/{print $0}'
+			if [[ $N -eq 0 ]]; then
+				continue
+			elif
+				[[ $(cat $i | wc -l) -le $((2*$N)) ]]; then
+				cat $i
+			else
+				head -n $N $i
+				echo ...
+				tail -n $N $i
+			fi
+			echo;
+		fi
+	done
 
-	if [[ $N -eq 0 ]]; then
-		continue
-	elif
-		[[ $(cat $i | wc -l) -le $((2*$N)) ]]; then
-		cat $i
-	else
-		echo Warning: file contains more lines than required | grep --color "Warning: file contains more lines than required"
-		head -n $N $i
-		echo ... | grep --color "..."
-		tail -n $N $i
-	fi;
-	echo; 
-done
-
-rm a
-
-
+	if [[ -e header254762 ]]; then rm header254762; fi
+fi
 
 
 
